@@ -84,12 +84,12 @@ User
 
 ### findAndCountAll - Search for multiple elements in the database&comma; returns both data and total count
 
-This is a convienience method that combines`findAll`&lpar;&rpar;and `count`&lpar;&rpar;&lpar;see below&rpar;&comma; this is useful when dealing with queries related to pagination where you want to retrieve data with a `limit` and `offset` but also need to know the total number of records that match the query&period;
+This is a convienience method that combines`findAll` and `count` (see below) this is useful when dealing with queries related to pagination where you want to retrieve data with a `limit` and `offset` but also need to know the total number of records that match the query:
 
-The success handler will always receive an object with two properties&colon;
+The success handler will always receive an object with two properties:
 
-* `count` - an integer&comma; total number records &lpar;matching the where clause&rpar;
-* `rows` - an array of objects&comma; the records &lpar;matching the where clause&rpar; within the limit&sol;offset range
+* `count` - an integer, total number records matching the where clause
+* `rows` - an array of objects, the records matching the where clause, within the limit and offset range
 ```js
 Project
   .findAndCountAll({
@@ -107,7 +107,33 @@ Project
   });
 ```
 
-The options &lsqb;object&rsqb; that you pass to`findAndCountAll`&lpar;&rpar;is the same as for`findAll`&lpar;&rpar;&lpar;described below&rpar;&period;
+`findAndCountAll` also supports includes. Only the includes that are marked as `required` will be added to the count part:
+
+Suppose you want to find all users who have a profile attached:
+```js
+User.findAndCountAll({
+  include: [
+     { model: Profile, required: true}
+  ],
+  limit 3
+});
+```
+
+Because the include for `Profile` has `required` set it will result in an inner join, and only the users who have a profile will be counted. If we remove `required` from the include, both users with and without profiles will be counted. Adding a `where` clause to the include automatically makes it required:
+
+```js
+User.findAndCountAll({
+  include: [
+     { model: Profile, where: { active: true }}
+  ],
+  limit 3
+});
+```
+
+The query above will only count users who have an active profile, because `required` is implicitly set to true when you add a where clause to the include.
+
+
+The options object that you pass to `findAndCountAll` is the same as for `findAll` (described below).
 
 ### findAll - Search for multiple elements in the database
 ```js
@@ -140,6 +166,8 @@ Project.findAll({ where: { id: [1,2,3] } }).then(function(projects) {
 Project.findAll({
   where: {
     id: {
+      $and: {a: 5}           // AND (a = 5)
+      $or: [{a: 5}, {a: 6}]  // (a = 5 OR a = 6)
       $gt: 6,                // id > 6
       $gte: 6,               // id >= 6
       $lt: 10,               // id < 10
@@ -148,6 +176,7 @@ Project.findAll({
       $between: [6, 10],     // BETWEEN 6 AND 10
       $notBetween: [11, 15], // NOT BETWEEN 11 AND 15
       $in: [1, 2],           // IN [1, 2]
+      $notIn: [1, 2],        // NOT IN [1, 2]
       $like: '%hat',         // LIKE '%hat'
       $notLike: '%hat'       // NOT LIKE '%hat'
       $iLike: '%hat'         // ILIKE '%hat' (case insensitive)
@@ -155,6 +184,7 @@ Project.findAll({
       $overlap: [1, 2]       // && [1, 2] (PG array overlap operator)
       $contains: [1, 2]      // @> [1, 2] (PG array contains operator)
       $contained: [1, 2]     // <@ [1, 2] (PG array contained by operator)
+      $any: [2,3]            // ANY ARRAY[2, 3]::INTEGER (PG only)
     },
     status: {
       $not: false,           // status NOT FALSE
@@ -290,13 +320,13 @@ To recap&comma; the elements of the order &sol; group array can be the following
 
 ### Raw queries
 
-Sometimes you might be expecting a massive dataset that you just want to display, without manipulation. For each row you select, Sequelize creates an instance with functions for updat, delete, get associations etc. If you have thousands of rows&comma; this might take some time&period; If you only need the raw data and don't want to update anything&comma; you can do like this to get the raw data&period;
+Sometimes you might be expecting a massive dataset that you just want to display, without manipulation. For each row you select, Sequelize creates an instance with functions for update, delete, get associations etc. If you have thousands of rows&comma; this might take some time&period; If you only need the raw data and don't want to update anything&comma; you can do like this to get the raw data&period;
 
 ```js
-// Are you expecting a masssive dataset from the DB,
+// Are you expecting a massive dataset from the DB,
 // and don't want to spend the time building DAOs for each entry?
 // You can pass an extra query option to get the raw data instead:
-Project.findAll({ where: ... }, { raw: true })
+Project.findAll({ where: { ... }, raw: true })
 ```
 
 ### count - Count the occurences of elements in the database
@@ -370,7 +400,7 @@ Project.sum('age').then(function(sum) {
 })
 
 Project.sum('age', { where: { age: { $gt: 5 } } }).then(function(sum) {
-  // wil be 50
+  // will be 50
 })
 ```
 
@@ -416,7 +446,7 @@ Task.findAll({ include: [ User ] }).then(function(tasks) {
 })
 ```
 
-Notice that the accessor is singular as the association is one-to-something&period;
+Notice that the accessor (the `User` property in the resulting instance) is singular because the association is one-to-something&period;
 
 Next thing&colon; Loading of data with many-to-something associations&excl;
 
@@ -442,7 +472,8 @@ User.findAll({ include: [ Task ] }).then(function(users) {
 })
 ```
 
-Notice that the accessor is plural&period; This is because the association is many-to-something&period;
+Notice that the accessor (the `Tasks` property in the resulting instance) is plural because the association is many-to-something&period;
+
 
 If an association is aliased (using the `as` option), you must specify this alias when including the model&period; Notice how the user's `Tool`s are aliased as `Instruments` above&period; In order to get that right you have to specify the model you want to load&comma; as well as the alias&colon;
 

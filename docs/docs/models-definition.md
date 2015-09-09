@@ -37,6 +37,12 @@ var Foo = sequelize.define('Foo', {
  someUnique: {type: Sequelize.STRING, unique: true},
  uniqueOne: { type: Sequelize.STRING,  unique: 'compositeIndex'},
  uniqueTwo: { type: Sequelize.INTEGER, unique: 'compositeIndex'}
+ 
+ // The unique property is simply a shorthand to create a unique index.
+ someUnique: {type: Sequelize.STRING, unique: true}
+ // It's exactly the same as creating the index in the model's options.
+ {someUnique: {type: Sequelize.STRING}},
+ {indexes: [{unique: true, fields: ['someUnique']}]}
 
  // Go on reading for further information about primary keys
  identifier: { type: Sequelize.STRING, primaryKey: true},
@@ -72,7 +78,7 @@ The comment option can also be used on a table, see [model configuration][0]
 
 ## Data types
 
-Below are some of the datatypes supported by sequelize. For a full and updated list, see [DataTypes](api/datatypes).
+Below are some of the datatypes supported by sequelize. For a full and updated list, see [DataTypes](../api/datatypes).
 
 ```js
 Sequelize.STRING                      // VARCHAR(255)
@@ -167,7 +173,7 @@ Sequelize.Deferrable.NOT
 ```
 
 The last option is the default in PostgreSQL and won't allow you to dynamically change
-the rule in a transaction. See [the transaction section](docs/transactions/#options) for further information.
+the rule in a transaction. See [the transaction section](transactions/#options) for further information.
 
 ## Getters & setters
 
@@ -212,7 +218,7 @@ Employee
 
 ### Defining as part of the model options
 
-Below is an example of defining the getters and setters in the model options. The `fullName` getter,  is an example of how you can define pseudo properties on your models - attributes which are not actually part of your database schema. In fact, pseudo properties can be defined in two ways: using model getters, or by using a column with the [`VIRTUAL` datatype](api/datatypes#virtual). Virtual datatypes can have validations, while getters for virtual attributes cannot.
+Below is an example of defining the getters and setters in the model options. The `fullName` getter,  is an example of how you can define pseudo properties on your models - attributes which are not actually part of your database schema. In fact, pseudo properties can be defined in two ways: using model getters, or by using a column with the [`VIRTUAL` datatype](../api/datatypes#virtual). Virtual datatypes can have validations, while getters for virtual attributes cannot.
 
 Note that the `this.firstname` and `this.lastname` references in the `fullName` getter function will trigger a call to the respective getter functions. If you do not want that then use the `getDataValue()` method to access the raw value (see below).
 
@@ -264,7 +270,7 @@ Model validations, allow you to specify format&sol;content&sol;inheritance valid
 
 Validations are automatically run on `create`, `update` and `save`. You can also call `validate()` to manually validate an instance.
 
-The validations are implemented by [validator][3].
+The validations are implemented by [validator.js][3].
 
 ```js
 var ValidateMe = sequelize.define('Foo', {
@@ -320,7 +326,7 @@ var ValidateMe = sequelize.define('Foo', {
 
 Note that where multiple arguments need to be passed to the built-in validation functions&comma; the arguments to be passed must be in an array&period; But if a single array argument is to be passed&comma; for instance an array of acceptable strings for `isIn`, this will be interpreted as multiple string arguments instead of one array argument&period; To work around this pass a single-length array of arguments&comma; such as `[['one', 'two']]` as shown above&period;
 
-To use a custom error message instead of that provided by node-validator&comma; use an object instead of the plain value or array of arguments&comma; for example a validator which needs no argument can be given a custom message with
+To use a custom error message instead of that provided by validator.js&comma; use an object instead of the plain value or array of arguments&comma; for example a validator which needs no argument can be given a custom message with
 
 ```js
 isInt: {
@@ -339,7 +345,7 @@ isIn: {
 
 When using custom validator functions the error message will be whatever message the thrown`Error`object holds&period;
 
-See [the node-validator project][4]for more details on the built in validation methods&period;
+See [the validator.js project][3] for more details on the built in validation methods&period;
 
 **Hint&colon; **You can also define a custom function for the logging part&period; Just pass a function&period; The first parameter will be the string that is logged&period;
 
@@ -642,6 +648,5 @@ sequelize.define('User', {}, {
 
 [0]: #configuration
 [3]: https://github.com/chriso/validator.js
-[4]: https://github.com/chriso/node-validator
 [5]: /docs/latest/misc#asynchronicity
 [6]: https://github.com/petkaantonov/bluebird/blob/master/API.md#spreadfunction-fulfilledhandler--function-rejectedhandler----promise

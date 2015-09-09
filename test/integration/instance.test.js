@@ -140,6 +140,16 @@ describe(Support.getTestDialectTeaser('Instance'), function() {
       });
     }
 
+    if (current.dialect.supports.returnValues.returning) {
+      it('supports returning', function() {
+        return this.User.findById(1).then(function(user1) {
+          return user1.increment('aNumber', { by: 2 }).then(function() {
+            expect(user1.aNumber).to.be.equal(2);
+          });
+        });
+      });
+    }
+
     it('supports where conditions', function() {
       var self = this;
       return this.User.findById(1).then(function(user1) {
@@ -499,6 +509,100 @@ describe(Support.getTestDialectTeaser('Instance'), function() {
               });
             });
           });
+        });
+      });
+    });
+
+    it('should set an association to null after deletion, 1-1', function() {
+      var Shoe = this.sequelize.define('Shoe', { brand: DataTypes.STRING })
+        , Player = this.sequelize.define('Player', { name: DataTypes.STRING });
+
+      Player.hasOne(Shoe);
+      Shoe.belongsTo(Player);
+
+      return this.sequelize.sync({force: true}).then(function() {
+        return Shoe.create({
+          brand: 'the brand',
+          Player: {
+            name: 'the player'
+          }
+        }, {include: [Player]});
+      }).then(function(shoe) {
+        return Player.findOne({
+          where: { id: shoe.Player.id },
+          include: [Shoe]
+        }).then(function(lePlayer) {
+          expect(lePlayer.Shoe).not.to.be.null;
+          return lePlayer.Shoe.destroy().return(lePlayer);
+        }).then(function(lePlayer) {
+          return lePlayer.reload();
+        }).then(function(lePlayer) {
+          expect(lePlayer.Shoe).to.be.null;
+        });
+      });
+    });
+
+    it('should set an association to empty after all deletion, 1-N', function() {
+      var Team = this.sequelize.define('Team', { name: DataTypes.STRING })
+        , Player = this.sequelize.define('Player', { name: DataTypes.STRING });
+
+      Team.hasMany(Player);
+      Player.belongsTo(Team);
+
+      return this.sequelize.sync({force: true}).then(function() {
+        return Team.create({
+          name: 'the team',
+          Players: [{
+            name: 'the player1'
+          }, {
+            name: 'the player2'
+          }]
+        }, {include: [Player]});
+      }).then(function(team) {
+        return Team.findOne({
+          where: { id: team.id },
+          include: [Player]
+        }).then(function(leTeam) {
+          expect(leTeam.Players).not.to.be.empty;
+          return leTeam.Players[1].destroy().then(function() {
+            return leTeam.Players[0].destroy();
+          }).return(leTeam);
+        }).then(function(leTeam) {
+          return leTeam.reload();
+        }).then(function(leTeam) {
+          expect(leTeam.Players).to.be.empty;
+        });
+      });
+    });
+
+    it('should update the associations after one element deleted', function() {
+      var Team = this.sequelize.define('Team', { name: DataTypes.STRING })
+        , Player = this.sequelize.define('Player', { name: DataTypes.STRING });
+
+      Team.hasMany(Player);
+      Player.belongsTo(Team);
+
+
+      return this.sequelize.sync({force: true}).then(function() {
+        return Team.create({
+          name: 'the team',
+          Players: [{
+            name: 'the player1'
+          }, {
+            name: 'the player2'
+          }]
+        }, {include: [Player]});
+      }).then(function(team) {
+        return Team.findOne({
+          where: { id: team.id },
+          include: [Player]
+        }).then(function(leTeam) {
+          expect(leTeam.Players).to.have.length(2);
+          return leTeam.Players[0].destroy().return(leTeam);
+        }).then(function(leTeam) {
+          return leTeam.reload();
+        }).then(function(leTeam) {
+          expect(leTeam.Players).to.have.length(1);
         });
       });
     });
@@ -976,6 +1080,30 @@ describe(Support.getTestDialectTeaser('Instance'), function() {
             silent: true
           }).then(function(user1) {
             expect(user1.updatedAt).to.equalDate(updatedAt);
+          });
+        });
+      });
+    });
+
+    describe('when nothing changed', function() {
+
+      beforeEach(function () {
+        this.clock = sinon.useFakeTimers();
+      });
+
+      afterEach(function () {
+        this.clock.restore();
+      });
+
+      it('does not update timestamps', function() {
+        var self = this;
+        return self.User.create({ username: 'John' }).then(function() {
+          return self.User.findOne({ username: 'John' }).then(function(user) {
+            var updatedAt = user.updatedAt;
+            self.clock.tick(2000);
+            return user.save().then(function(newlySavedUser) {
+              expect(newlySavedUser.updatedAt).to.equalTime(updatedAt);
+            });
           });
         });
       });
